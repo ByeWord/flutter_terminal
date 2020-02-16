@@ -4,37 +4,37 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
-Process mConsole;
+Process mTerminal;
 
-typedef ConsoleCallback = Future Function();
+typedef TerminalCallback = Future Function();
 
-bool isDarkMode = true;
+bool isDarkMode = false;
 
-class Console extends StatefulWidget {
+class Terminal extends StatefulWidget {
   final String tag;
-  final ConsoleCallback consoleCallback;
+  final TerminalCallback terminalCallback;
   final String autoshell;
   final Color color;
   final Widget title;
   final String deleteCmd;
   final bool usePath; //是否使用M工具箱数据目录作为Path
 
-  const Console({
+  const Terminal({
     Key key,
     this.autoshell,
     this.color,
     this.title,
     this.tag,
     this.deleteCmd,
-    this.consoleCallback,
+    this.terminalCallback,
     this.usePath,
   }) : super(key: key);
 
   @override
-  _ConsoleState createState() => _ConsoleState();
+  _TerminalState createState() => _TerminalState();
 }
 
-class _ConsoleState extends State<Console> {
+class _TerminalState extends State<Terminal> {
   Color _color; //头部的颜色
   bool canExit = true; //终端是否能被返回（true为可返回）（当所有callback执行完成自动返回）
   TextEditingController _textEditingController =
@@ -54,7 +54,7 @@ class _ConsoleState extends State<Console> {
     _color ??= Colors.transparent;
     setPwd(":~$pwd #  ");
     initConsale();
-    if (widget.autoshell != null) autoshell();
+    if (widget.autoshell != null) autoShell();
   }
 
   initConsale() {
@@ -63,44 +63,31 @@ class _ConsoleState extends State<Console> {
     Process.start('sh', [], includeParentEnvironment: true, runInShell: false)
         .then(
       (Process process) {
-        mConsole = process;
+        mTerminal = process;
         if (widget.usePath == null)
-          mConsole.stdin.write(
+          mTerminal.stdin.write(
               "export PATH=/data/data/com.nightmare/files/usr/bin:\$PATH\n" +
                   "export TERM=\${TERM:-dumb}\n");
-        mConsole.stdout.transform(utf8.decoder).listen(
+        mTerminal.stdout.transform(utf8.decoder).listen(
           (data) async {
             List<String> _data = data.trimRight().split("\n");
             for (String _str in _data) {
-              if (_str == "Nightmare_exit_true") {
-                if (widget.consoleCallback != null) {
-                  await widget.consoleCallback();
-                  if (widget.deleteCmd != null) {
-                    //如果传进来了删除命令
-                    addDeleteWidget();
-                  }
-                }
-                canExit = true;
-                _timeTicker.cancel(); //取消计时
-                setState(() {});
+              if (_str == "") {
+                _updateTextToList(_str);
               } else {
-                if (_str == "") {
-                  _updateTextToList(_str);
+                if (_str.contains("exitCode=")) {
+                } else if (_str.contains("pwd=")) {
+                  pwd = _str.replaceAll("pwd=", "");
+                  setPwd(":~$pwd #  ");
                 } else {
-                  if (_str.contains("exitCode=")) {
-                  } else if (_str.contains("pwd=")) {
-                    pwd = _str.replaceAll("pwd=", "");
-                    setPwd(":~$pwd #  ");
-                  } else {
-                    print(_str);
-                    _updateTextToList("\n" + _str);
-                  }
+                  print(_str);
+                  _updateTextToList("\n" + _str);
                 }
               }
             }
           },
         );
-        mConsole.stderr.transform(utf8.decoder).listen(
+        mTerminal.stderr.transform(utf8.decoder).listen(
           (data) {
             print(data);
             _updateTextToList(
@@ -126,7 +113,7 @@ class _ConsoleState extends State<Console> {
           ),
           InkWell(
             onTap: () {
-              mConsole.stdin.write("${widget.deleteCmd}\n");
+              mTerminal.stdin.write("${widget.deleteCmd}\n");
               Navigator.of(context).pop();
             },
             child: SizedBox(
@@ -166,7 +153,7 @@ class _ConsoleState extends State<Console> {
     if (mounted) setState(() {});
   }
 
-  autoshell() async {
+  autoShell() async {
     canExit = false; //拦截返回按键
     _timeTicker = Timer.periodic(
       Duration(milliseconds: 1000),
@@ -189,15 +176,15 @@ class _ConsoleState extends State<Console> {
       Duration(milliseconds: 100),
       () async {
         for (String line in widget.autoshell.split("\n")) {
-          if (line.contains(RegExp("\\[console:.*\\]"))) {
+          if (line.contains(RegExp("\\[Terminal:.*\\]"))) {
             //如果是特定字符串需要解析
-            String _exec = line.replaceAll(RegExp("\\[|\\]|console:"), "");
-            mConsole.stdin.write("echo $_exec\n");
+            String _exec = line.replaceAll(RegExp("\\[|\\]|Terminal:"), "");
+            mTerminal.stdin.write("echo $_exec\n");
             while (!_text.contains(_exec)) {
               await Future.delayed(Duration(milliseconds: 100));
             }
           } else {
-            mConsole.stdin.write("$line\n");
+            mTerminal.stdin.write("$line\n");
           }
         }
       },
@@ -236,9 +223,9 @@ class _ConsoleState extends State<Console> {
       ),
       home: Scaffold(
         resizeToAvoidBottomPadding: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         appBar: PreferredSize(
-            child: ConsoleAppBar(
+            child: TerminalAppBar(
                 widget: widget,
                 timeTicker: _timeTicker,
                 time: _time,
@@ -330,7 +317,7 @@ class _ConsoleState extends State<Console> {
                               _text += "$str";
                             else
                               _text += "\n$str";
-                            mConsole.stdin.write(_textEditingController.text
+                            mTerminal.stdin.write(_textEditingController.text
                                     .replaceAll(":~$pwd #  ", "") +
                                 "\necho exitCode=\$?&&echo pwd=`pwd`\n");
                             _textEditingController.text = "";
@@ -355,8 +342,8 @@ class _ConsoleState extends State<Console> {
   }
 }
 
-class ConsoleAppBar extends StatelessWidget {
-  const ConsoleAppBar({
+class TerminalAppBar extends StatelessWidget {
+  const TerminalAppBar({
     Key key,
     @required this.widget,
     @required Timer timeTicker,
@@ -367,7 +354,7 @@ class ConsoleAppBar extends StatelessWidget {
         _color = color,
         super(key: key);
 
-  final Console widget;
+  final Terminal widget;
   final Timer _timeTicker;
   final double _time;
   final Color _color;
