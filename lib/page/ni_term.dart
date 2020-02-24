@@ -61,7 +61,7 @@ class Niterm extends StatefulWidget {
     Map<String, String> environment = {};
     environment.addAll(Platform.environment);
     environment["PATH"] =
-        "/data/data/com.nightmare/files/usr/bin:" + environment["PATH"];
+        "/data/data/com.nightmare.flutter_terminal/files/usr/bin:" + environment["PATH"];
     envp = allocate(count: environment.keys.length + 1);
     for (int i = 0; i < environment.keys.length; i++) {
       envp[i] = Utf8.toUtf8(
@@ -73,7 +73,7 @@ class Niterm extends StatefulWidget {
     createSubprocess(
         Utf8.toUtf8(''),
         Utf8.toUtf8('/system/bin/sh'),
-        Utf8.toUtf8('/data/data/com.nightmare/files/home'),
+        Utf8.toUtf8('/data/data/com.nightmare.flutter_terminal'),
         argv,
         envp,
         p,
@@ -126,7 +126,9 @@ class _NitermState extends State<Niterm> {
       Pointer resultPoint = getOutFromFd(Niterm.terms.first);
       if (resultPoint.address != 0) {
         String result = Utf8.fromUtf8(resultPoint);
+        print(result);
         if (result.startsWith("\b")) {
+
           out = out.substring(0, out.length - 1);
           setState(() {});
         } else {
@@ -173,6 +175,7 @@ class _NitermState extends State<Niterm> {
   ScrollController scrollController = ScrollController();
   @override
   Widget build(BuildContext context) {
+    print(Niterm.terms);
     listSpan = [];
     for (String a in out.split(String.fromCharCodes([27, 91]))) {
       if (a.startsWith(RegExp("[0-9];"))) {
