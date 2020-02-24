@@ -1,9 +1,9 @@
 # flutter_terminal
 
-Flutter重写的标准终端模拟器
-其实现方法参照termux在Android的实现
-使用Flutter框架重写它的UI部分
-并重写了termux的C语言部分
+Flutter重写的标准终端模拟器 
+其实现方法参照termux在Android的实现 
+使用Flutter框架重写它的UI部分 
+并重写了termux的C语言部分 
 
 # 为何要用Flutter重写而不是安卓？
 
