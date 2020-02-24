@@ -1,4 +1,4 @@
-# flutter_console
+# flutter_terminal
 
 Flutter开发的简易终端模拟器
 
