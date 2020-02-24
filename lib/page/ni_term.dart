@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
+import 'package:flutter/services.dart';
 
 typedef create_subprocess = Void Function(
     Pointer<Utf8> env,
@@ -47,21 +48,21 @@ class Niterm extends StatefulWidget {
     //等价于  char **argv;
 
     final getPtmIntPointer =
-        dylib.lookup<NativeFunction<get_ptm_int>>('get_ptm_int');
+    dylib.lookup<NativeFunction<get_ptm_int>>('get_ptm_int');
     final GetPtmInt getPtmInt = getPtmIntPointer.asFunction<GetPtmInt>();
     int currentPtm = getPtmInt(50, 68);
     terms.add(currentPtm);
     final createSubprocessPointer =
-        dylib.lookup<NativeFunction<create_subprocess>>('create_subprocess');
+    dylib.lookup<NativeFunction<create_subprocess>>('create_subprocess');
     CreateSubprocess createSubprocess =
-        createSubprocessPointer.asFunction<CreateSubprocess>();
+    createSubprocessPointer.asFunction<CreateSubprocess>();
     Pointer<Pointer<Utf8>> argv = allocate(count: 1);
     argv[0] = Pointer.fromAddress(0);
     Pointer<Pointer<Utf8>> envp;
     Map<String, String> environment = {};
     environment.addAll(Platform.environment);
     environment["PATH"] =
-        "/data/data/com.nightmare.flutter_terminal/files/usr/bin:" + environment["PATH"];
+        "/data/data/com.nightmare/files/usr/bin:" + environment["PATH"];
     envp = allocate(count: environment.keys.length + 1);
     for (int i = 0; i < environment.keys.length; i++) {
       envp[i] = Utf8.toUtf8(
@@ -73,7 +74,7 @@ class Niterm extends StatefulWidget {
     createSubprocess(
         Utf8.toUtf8(''),
         Utf8.toUtf8('/system/bin/sh'),
-        Utf8.toUtf8('/data/data/com.nightmare.flutter_terminal'),
+        Utf8.toUtf8('/'),
         argv,
         envp,
         p,
@@ -106,14 +107,14 @@ class _NitermState extends State<Niterm> {
     final dylib = DynamicLibrary.open(path);
 
     final getOutFromFdPointer =
-        dylib.lookup<NativeFunction<get_output_from_fd>>('get_output_from_fd');
+    dylib.lookup<NativeFunction<get_output_from_fd>>('get_output_from_fd');
     GetOutFromFd getOutFromFd = getOutFromFdPointer.asFunction();
     final writetofdpointer =
-        dylib.lookup<NativeFunction<write_to_fd>>('write_to_fd');
+    dylib.lookup<NativeFunction<write_to_fd>>('write_to_fd');
     writeToFd = writetofdpointer.asFunction();
     Future.delayed(
       Duration(seconds: 1),
-      () {
+          () {
         if (widget.script != null) {
           for (String a in widget.script.split("")) {
             writeToFd(Niterm.terms.first, Utf8.toUtf8(a));
@@ -122,16 +123,18 @@ class _NitermState extends State<Niterm> {
       },
     );
     Future.delayed(Duration(seconds: 1), () async {
-      while (true && Niterm.terms.isNotEmpty) {
+      while (mounted && Niterm.terms.isNotEmpty) {
         // Utf8.fromUtf8(string)
         Pointer resultPoint = getOutFromFd(Niterm.terms.first);
         if (resultPoint.address != 0) {
           String result = Utf8.fromUtf8(resultPoint);
-          print(result);
           if (result.startsWith("\b")) {
             out = out.substring(0, out.length - 1);
             setState(() {});
+          } else if (result.codeUnitAt(0)==7) {
+            print("别删了");
           } else {
+            print(result.codeUnits);
             out += result;
             // if (!result.contains(String.fromCharCodes([27, 91]))) {
             //   out = result;
@@ -180,66 +183,112 @@ class _NitermState extends State<Niterm> {
   ScrollController scrollController = ScrollController();
   @override
   Widget build(BuildContext context) {
-    print(Niterm.terms);
     listSpan = [];
     for (String a in out.split(String.fromCharCodes([27, 91]))) {
       if (a.startsWith(RegExp("[0-9];"))) {
-        String colorNumber = a.split(";")[1].substring(0, 2);
+        RegExp regExp = RegExp("[0-9];[0-9]*m");
+        String header = regExp.firstMatch(a).group(0);
+
+        // for(String str in a.split(RegExp("[0-9];[0-9]*m"))){
+        //   print(str);
+        // }
+        // print(header);
+        String colorNumber = header.split(";")[1];
+        // print(colorNumber);
         // if(colorNumber)
-        print(a);
-        if (colorNumber == "34")
+        if (colorNumber == "34m")
           listSpan.add(
             TextSpan(
-              text: a.replaceAll(RegExp("^.*$colorNumber\m"), ""),
+              text: a.replaceAll(header, ""),
               style: TextStyle(color: Colors.lightBlue),
             ),
           );
-        else if (colorNumber == "32")
+        else if (colorNumber == "32m")
           listSpan.add(
             TextSpan(
-              text: a.replaceAll(RegExp("^.*$colorNumber\m"), ""),
+              text: a.replaceAll(header, ""),
               style: TextStyle(color: Colors.lightGreenAccent),
             ),
           );
-        else if (colorNumber == "36")
+        else if (colorNumber == "36m")
           listSpan.add(
             TextSpan(
-              text: a.replaceAll(RegExp("^.*$colorNumber\m"), ""),
+              text: a.replaceAll(header, ""),
               style: TextStyle(color: Colors.greenAccent),
             ),
           );
         else if (colorNumber == "0m")
           listSpan.add(
             TextSpan(
-              text: a.replaceAll(RegExp("^.*$colorNumber\m"), ""),
+              text: a.replaceAll(header, ""),
               style: TextStyle(color: Colors.white),
             ),
           );
       } else {
-        listSpan.add(TextSpan(text: a.replaceAll(RegExp("^m"), "")));
+        listSpan.add(TextSpan(
+            text: a.replaceAll(RegExp("^m"), ""),
+            style: TextStyle(color: Colors.white)));
       }
     }
-    // out = out.replaceAll(String.fromCharCodes([27, 91]), "");
-    // for (String a in out.split("\n")) {
-    //   if (a.startsWith(String.fromCharCodes([27, 91])) &&
-    //       a.endsWith(String.fromCharCodes([27, 91, 109, 13]))) {
-    //     // print(a.codeUnits);
 
-    //     print(a);
-    //   }
-    // }
     return MaterialApp(
       home: WillPopScope(
         child: Scaffold(
           resizeToAvoidBottomPadding: true,
-          backgroundColor: Color(0xff073542),
+          backgroundColor: Colors.black,
+          // backgroundColor: Color(0xff073542),
           body: SafeArea(
             child: GestureDetector(
-              onTap: () {
+              onTap: () async {
                 focusNode.unfocus();
                 FocusScope.of(context).requestFocus(focusNode);
                 scrollController
                     .jumpTo(scrollController.position.maxScrollExtent);
+              },
+              onLongPress: () {},
+              onLongPressEnd: (details) {
+                Feedback.forLongPress(context);
+                OverlayEntry overlayEntry;
+                overlayEntry = OverlayEntry(
+                  builder: (context) {
+                    //外层使用Positioned进行定位，控制在Overlay中的位置
+                    return Positioned(
+                      top: details.globalPosition.dy,
+                      left: details.globalPosition.dx - 60,
+                      child: Center(
+                        child: Material(
+                          color: Colors.white,
+                          shadowColor: Colors.grey.withOpacity(0.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(8.0),
+                            ),
+                          ),
+                          elevation: 12.0,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(8.0),
+                            ),
+                            child: FlatButton(
+                              onPressed: () async {
+                                String b =
+                                    (await Clipboard.getData("text/plain"))
+                                        .text;
+                                for (String a in b.split("")) {
+                                  writeToFd(Niterm.terms.first, Utf8.toUtf8(a));
+                                }
+                                overlayEntry.remove();
+                              },
+                              child: Text("粘贴"),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+                //往Overlay中插入插入OverlayEntry
+                Overlay.of(context).insert(overlayEntry);
               },
               child: ListView(
                 controller: scrollController,
@@ -281,7 +330,8 @@ class _NitermState extends State<Niterm> {
                       ),
                       onChanged: (r) {
                         if (r.length > str.length) {
-                          writeToFd(Niterm.terms.first, Utf8.toUtf8(r.replaceAll(str, "")));
+                          writeToFd(Niterm.terms.first,
+                              Utf8.toUtf8(r.replaceAll(str, "")));
                         } else {
                           writeToFd(Niterm.terms.first, Utf8.toUtf8("\b"));
                         }
