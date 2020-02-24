@@ -121,40 +121,45 @@ class _NitermState extends State<Niterm> {
         }
       },
     );
-    while (true && Niterm.terms.isNotEmpty) {
-      // Utf8.fromUtf8(string)
-      Pointer resultPoint = getOutFromFd(Niterm.terms.first);
-      if (resultPoint.address != 0) {
-        String result = Utf8.fromUtf8(resultPoint);
-        print(result);
-        if (result.startsWith("\b")) {
-
-          out = out.substring(0, out.length - 1);
-          setState(() {});
-        } else {
-          out += result;
-          // if (!result.contains(String.fromCharCodes([27, 91]))) {
-          //   out = result;
-          //   listSpan.add(
-          //       TextSpan(style: TextStyle(color: Colors.white), text: out));
-          // } else {
-          //   for (String a in result.split(String.fromCharCodes([27, 91]))) {
-          //     print(a);
-          //     listSpan
-          //         .add(TextSpan(style: TextStyle(color: Colors.red), text: a));
-          //   }
-          // }
-          setState(() {});
-          scrollController.jumpTo(scrollController.position.maxScrollExtent);
-          Future.delayed(Duration(milliseconds: 300), () {
-            scrollController.jumpTo(scrollController.position.maxScrollExtent);
-          });
+    Future.delayed(Duration(seconds: 1), () async {
+      while (true && Niterm.terms.isNotEmpty) {
+        // Utf8.fromUtf8(string)
+        Pointer resultPoint = getOutFromFd(Niterm.terms.first);
+        if (resultPoint.address != 0) {
+          String result = Utf8.fromUtf8(resultPoint);
+          print(result);
+          if (result.startsWith("\b")) {
+            out = out.substring(0, out.length - 1);
+            setState(() {});
+          } else {
+            out += result;
+            // if (!result.contains(String.fromCharCodes([27, 91]))) {
+            //   out = result;
+            //   listSpan.add(
+            //       TextSpan(style: TextStyle(color: Colors.white), text: out));
+            // } else {
+            //   for (String a in result.split(String.fromCharCodes([27, 91]))) {
+            //     print(a);
+            //     listSpan
+            //         .add(TextSpan(style: TextStyle(color: Colors.red), text: a));
+            //   }
+            // }
+            if (mounted) {
+              setState(() {});
+              scrollController
+                  .jumpTo(scrollController.position.maxScrollExtent);
+              Future.delayed(Duration(milliseconds: 300), () {
+                scrollController
+                    .jumpTo(scrollController.position.maxScrollExtent);
+              });
+            }
+          }
+          // print(out);
         }
-        // print(out);
+        free(resultPoint);
+        await Future.delayed(Duration(microseconds: 0));
       }
-      free(resultPoint);
-      await Future.delayed(Duration(microseconds: 0));
-    }
+    });
   }
 
   @override
