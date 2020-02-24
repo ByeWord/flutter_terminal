@@ -59,14 +59,14 @@ class _TerminalState extends State<Terminal> {
 
   initConsale() async {
     Map<String, String> _path = Map();
-    _path["PATH"] = "/data/data/com.nightmare/files/usr/bin";
+    _path["PATH"] = "/data/data/com.nightmare.flutter_terminal/files/usr/bin";
     Process.start('sh', [], includeParentEnvironment: true, runInShell: false)
         .then(
       (Process process) async {
         mTerminal = process;
         if (widget.usePath == null)
           mTerminal.stdin.write(
-              "export PATH=/data/data/com.nightmare/files/usr/bin:\$PATH\n" +
+              "export PATH=/data/data/com.nightmare.flutter_terminal/files/usr/bin:\$PATH\n" +
                   "export TERM=\${TERM:-dumb}\n");
         mTerminal.stdout.transform(utf8.decoder).listen(
           (data) async {
