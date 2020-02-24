@@ -1,6 +1,6 @@
 # flutter_terminal
 
-Flutter开发的简易终端模拟器
+Flutter重写的标准终端模拟器
 其实现方法参照termux在Android的实现
 使用Flutter框架重写它的UI部分
 并重写了termux的C语言部分
@@ -8,12 +8,18 @@ Flutter开发的简易终端模拟器
 # 为何要用Flutter重写而不是安卓？
 
 除了个人的一系列想法之外，完全是由于Flutter的跨平台性，
-termux与Android-Terminal-Emulater的UI实现是通过java编写，它们最终只能运行于安卓设备上
+termux与Android-Terminal-Emulater的UI实现是通过java编写
+终端的创建与子进程的执行完全由jni完成
+它们最终只能运行于安卓设备上
 而其实这种创建虚拟终端的思想几乎是能用于任何UNIX平台的设备，也就是还有Macos，Linux
 
 # 为何它的表现并不如原始的安卓模拟器
 
-原始的安卓模拟器带有一整太终端虚拟机的控制序列
+它截止目前只能识别一些带颜色的输出，原始的安卓模拟器带有一整套终端虚拟机的控制序列，
+Flutter当前作为很优秀的跨平台框架，我想也能用它来重写一套新的终端序列，从安卓前几代终端模拟器来看，
+这可能是一个比较漫长的过程，而我的时间并不太多，但我会尽量尝试重写
+Dart没有Java中的文件描述符类型，这使得Dart无法通过一个文件描述符(整形变量)，去读写一个设备，
+所以我最终完整的重写了termux的C语言部分，由于dart:ffi不需要C语言单独的函数支持，所以最后其实是减少了原始的代码
 
 ## Terminal resources
 
@@ -47,3 +53,6 @@ termux与Android-Terminal-Emulater的UI实现是通过java编写，它们最终�
 
 - Android Terminal Emulator: Android terminal app which Termux terminal handling
   is based on. Inactive. [Source](https://github.com/jackpal/Android-Terminal-Emulator).
+
+- termux: Android terminal and Linux environment - app repository.
+ [Source](https://github.com/termux/termux-app).
