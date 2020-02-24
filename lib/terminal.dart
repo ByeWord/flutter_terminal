@@ -57,12 +57,12 @@ class _TerminalState extends State<Terminal> {
     if (widget.autoshell != null) autoShell();
   }
 
-  initConsale() {
+  initConsale() async {
     Map<String, String> _path = Map();
     _path["PATH"] = "/data/data/com.nightmare/files/usr/bin";
     Process.start('sh', [], includeParentEnvironment: true, runInShell: false)
         .then(
-      (Process process) {
+      (Process process) async {
         mTerminal = process;
         if (widget.usePath == null)
           mTerminal.stdin.write(
@@ -96,8 +96,10 @@ class _TerminalState extends State<Terminal> {
             );
           },
         );
+        print(await mTerminal);
       },
     );
+
   }
 
   // 当有删除文件命令传进来的时候会用到
